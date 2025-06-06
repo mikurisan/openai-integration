@@ -102,14 +102,11 @@ async def create_model_chat_completions(
     
     poe_bot_name = request_data.model
     protocol_messages: List[fp.ProtocolMessage] = []
-    instructions_str = "You are a helpful assistant."
 
-    for msg in request_data.input:
+    for msg in request_data.messages:
         text_content = msg.content
         poe_role = msg.role
 
-        if msg.role == "system":
-            instructions_str = text_content
         if msg.role == "assistant":
             poe_role = "bot"
         elif msg.role not in ["system", "user", "bot"]:

@@ -29,7 +29,7 @@ class ClientMessage(BaseModel):
 
 class ClientRequest(BaseModel):
     model: str
-    input: List[ClientMessageWithType]
-    message: List[ClientMessage] = Field(default_factory=list) 
+    input: List[ClientMessageWithType] = Field(default_factory=list)
+    messages: List[ClientMessage] = Field(default_factory=list) 
     stream: bool = False
     service_tier: Optional[str] = None
