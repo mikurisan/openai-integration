@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Union
 
 class ClientInputContentItem(BaseModel):
@@ -6,7 +6,7 @@ class ClientInputContentItem(BaseModel):
     type: Optional[str] = None
 
 
-class ClientMessage(BaseModel):
+class ClientMessageWithType(BaseModel):
     role: str
     content: Union[str, List[ClientInputContentItem]]
 
@@ -22,8 +22,14 @@ class ClientMessage(BaseModel):
         return ""
 
 
-class ChatCompletionClientRequest(BaseModel):
+class ClientMessage(BaseModel):
+    role: str
+    content: str
+
+
+class ClientRequest(BaseModel):
     model: str
-    input: List[ClientMessage]
+    input: List[ClientMessageWithType]
+    message: List[ClientMessage] = Field(default_factory=list) 
     stream: bool = False
     service_tier: Optional[str] = None

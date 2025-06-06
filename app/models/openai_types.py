@@ -100,3 +100,31 @@ class OutputText(ContentBase):
 class ErrorBase(CustomBaseModel):
     type: str
     message: str
+
+
+class MessageBase(CustomBaseModel):
+    content: str = ""
+    refusal: None = None
+    role: str = "assistant"
+    annotations: None = None
+    audio: None = None
+    function_call: None = None
+    tool_calls: None = None
+
+
+class ChoiceBase(CustomBaseModel):
+    finish_reason: str = "stop"
+    index: int = 0
+    logprobs: None = None
+    message: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ChatCompletionBase(CustomBaseModel):
+    response_id: str = Field(..., alias="id")
+    choices: List[Dict[str, Any]] = Field(default_factory=list) 
+    created_at: int = Field(..., alias="created")
+    model_name: str = Field(..., alias="model")
+    object: str = "chaht.completion"
+    service_tier: str = "default"
+    system_fingerprint: str = Field(...)
+    usage: Dict[str, Any] = Field(default_factory=dict)

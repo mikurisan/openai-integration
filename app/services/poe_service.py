@@ -3,6 +3,7 @@ from utils.sse_utils import SSEFormatter
 from models.openai_types import ResponseStatus, ResponseTypes, ResponseBase
 from models.openai_types import ItemBase, OutputItem, PartBase, ContentPart
 from models.openai_types import OutputTextDelta, OutputText, ErrorBase
+from models.openai_types import MessageBase, ChoiceBase, ChatCompletionBase
 from fastapi_poe.client import BotError
 
 import fastapi_poe as fp
@@ -26,7 +27,7 @@ DEFAULT_ERROR_USAGE = {
 }
 
 
-async def get_poe_response_in_streaming(
+async def get_poe_response_streaming(
         bot_name: str, poe_api_key: str,
         protocol_messages: List[fp.ProtocolMessage],
         instructions_str: str,
@@ -180,7 +181,7 @@ async def get_poe_response_in_streaming(
         yield sse_formatter.format(ResponseTypes.COMPLETED.value, {'type': ResponseTypes.COMPLETED.value, 'response': completed_error_payload.to_dict()})
 
 
-async def get_poe_response_none_streaming(
+async def get_poe_response_non_streaming(
         bot_name: str, poe_api_key: str,
         protocol_messages: List[fp.ProtocolMessage],
         instructions_str: str,
@@ -230,3 +231,42 @@ async def get_poe_response_none_streaming(
         output_list=[item_base_payload.to_dict()], usage_obj=DEFAULT_SUCCESS_USAGE
         )
     return response_completed_payload.to_dict()
+
+
+async def get_poe_chat_completion_non_streaming(
+        bot_name: str, poe_api_key: str,
+        protocol_messages: List[fp.ProtocolMessage],
+        request_model_name: str
+):
+    response_id = f"resp-{uuid.uuid4().hex}"
+    created_at = int(time.time())
+    base_response_args = {
+        "response_id": response_id,
+        "model_name": request_model_name,
+        "created_at": created_at 
+    }
+    accumulated_text = ""
+    async for partial in fp.get_bot_response(
+        messages=protocol_messages, bot_name=bot_name, api_key=poe_api_key
+    ):
+        if isinstance(partial, fp.PartialResponse) and partial.text:
+            accumulated_text += partial.text
+            
+        elif isinstance(partial, fp.ErrorResponse):
+            error_text_from_poe = f"Poe ErrorResponse: {partial.text} (Code: {partial.error_code}, Type: {partial.error_type})"
+            logger.error(error_text_from_poe)
+            error_obj_payload = MessageBase(refusal=partial.text or "Unknown error from Poe ErrorResponse")
+            choice_payload = ChoiceBase(message=error_obj_payload.to_dict())
+            completed_error_payload = ChatCompletionBase(
+                **base_response_args,
+                choices=[choice_payload.to_dict()],
+            )
+            return completed_error_payload
+
+    message_payload = MessageBase(refusal=partial.text or "Unknown error from Poe ErrorResponse")
+    choice_payload = ChoiceBase(message=message_payload.to_dict())
+    response_completed_payload = ChatCompletionBase(
+        **base_response_args,
+        choices=[choice_payload.to_dict()],
+    )
+    return response_completed_payload
