@@ -273,4 +273,4 @@ async def get_poe_chat_completion_non_streaming(
         choices=[choice_payload.to_dict()],
         system_fingerprint=system_fingerprint
     )
-    return response_completed_payload
+    return response_completed_payload.to_dict()
