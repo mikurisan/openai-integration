@@ -245,6 +245,8 @@ async def get_poe_chat_completion_non_streaming(
         "model_name": request_model_name,
         "created_at": created_at 
     }
+
+    system_fingerprint = f"fp_{uuid.uuid4().hex[:10]}"
     accumulated_text = ""
     async for partial in fp.get_bot_response(
         messages=protocol_messages, bot_name=bot_name, api_key=poe_api_key
@@ -260,6 +262,7 @@ async def get_poe_chat_completion_non_streaming(
             completed_error_payload = ChatCompletionBase(
                 **base_response_args,
                 choices=[choice_payload.to_dict()],
+                system_fingerprint=system_fingerprint
             )
             return completed_error_payload
 
@@ -268,5 +271,6 @@ async def get_poe_chat_completion_non_streaming(
     response_completed_payload = ChatCompletionBase(
         **base_response_args,
         choices=[choice_payload.to_dict()],
+        system_fingerprint=system_fingerprint
     )
     return response_completed_payload
