@@ -1,0 +1,15 @@
+name: Keep Alive
+on:
+  schedule:
+    - cron: '*/14 * * * *'
+  workflow_dispatch:
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Keep website alive
+        run: |
+          echo "Pinging website..."
+          curl -f https://openai-integration-qar5.onrender.com/ || echo "Ping failed but continuing..."
+          echo "Ping completed at $(date)"
