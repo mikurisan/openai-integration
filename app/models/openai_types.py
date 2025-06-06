@@ -27,8 +27,8 @@ class CustomBaseModel(BaseModel):
     class Config:
         populate_by_name = True
     
-    def to_dict(self) -> Dict[str, Any]:
-        return self.model_dump(by_alias=True)
+    def to_dict(self, exclude: Optional[set] = None) -> Dict[str, Any]:
+        return self.model_dump(by_alias=True, exclude=exclude)
     
 
 class ResponseBase(CustomBaseModel):
