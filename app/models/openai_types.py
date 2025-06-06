@@ -28,7 +28,7 @@ class CustomBaseModel(BaseModel):
         populate_by_name = True
     
     def to_dict(self) -> Dict[str, Any]:
-        return self.dict(by_alias=True)
+        return self.model_dump(by_alias=True)
     
 
 class ResponseBase(CustomBaseModel):
@@ -44,8 +44,8 @@ class ResponseBase(CustomBaseModel):
     top_p: Optional[float] = 1.0
     
     object: str = "response"
-    incomplete_details: None = None
-    max_output_tokens: None = None
+    incomplete_details: Optional[Any] = None
+    max_output_tokens: Optional[Any] = None
     parallel_tool_calls: bool = True
     previous_response_id: int = None
     reasoning: Dict[str, None] = Field(default_factory=lambda: {"effort": None, "summary": None})
@@ -54,7 +54,7 @@ class ResponseBase(CustomBaseModel):
     tool_choice: str = "auto"
     tools: List = Field(default_factory=list)
     truncation: str = "disabled"
-    user: None = None
+    user: Optional[Any] = None
     metadata: Dict = Field(default_factory=dict)
 
 
@@ -104,18 +104,18 @@ class ErrorBase(CustomBaseModel):
 
 class MessageBase(CustomBaseModel):
     content: str = ""
-    refusal: None = None
+    refusal: Optional[str] = None
     role: str = "assistant"
-    annotations: None = None
-    audio: None = None
-    function_call: None = None
-    tool_calls: None = None
+    annotations: Optional[Any] = None
+    audio: Optional[Any] = None
+    function_call: Optional[Any] = None
+    tool_calls: Optional[Any] = None
 
 
 class ChoiceBase(CustomBaseModel):
     finish_reason: str = "stop"
     index: int = 0
-    logprobs: None = None
+    logprobs: Optional[Any] = None
     message: Dict[str, Any] = Field(default_factory=dict)
 
 
