@@ -266,7 +266,7 @@ async def get_poe_chat_completion_non_streaming(
             )
             return completed_error_payload
 
-    message_payload = MessageBase(refusal=partial.text or "Unknown error from Poe ErrorResponse")
+    message_payload = MessageBase(content=accumulated_text)
     choice_payload = ChoiceBase(message=message_payload.to_dict())
     response_completed_payload = ChatCompletionBase(
         **base_response_args,
