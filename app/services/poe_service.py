@@ -239,7 +239,8 @@ async def get_poe_chat_completion_non_streaming(
         protocol_messages: List[fp.ProtocolMessage],
         request_model_name: str
 ):
-    response_id = f"resp-{uuid.uuid4().hex}"
+    response_id = f"chatcmpl-{uuid.uuid4().hex}"
+    system_fingerprint = f"fp_{uuid.uuid4().hex[:10]}"
     created_at = int(time.time())
     base_response_args = {
         "response_id": response_id,
@@ -247,7 +248,6 @@ async def get_poe_chat_completion_non_streaming(
         "created_at": created_at 
     }
 
-    system_fingerprint = f"fp_{uuid.uuid4().hex[:10]}"
     accumulated_text = ""
     async for partial in fp.get_bot_response(
         messages=protocol_messages, bot_name=bot_name, api_key=poe_api_key
@@ -269,7 +269,7 @@ async def get_poe_chat_completion_non_streaming(
                 choices=[choice_payload.to_dict()],
                 system_fingerprint=system_fingerprint
             )
-            return completed_error_payload
+            return completed_error_payload.to_dict()
 
     message_payload = MessageBase(content=accumulated_text, role="assistant")
     choice_payload = ChoiceMessage(message=message_payload.to_dict(), finish_reason="stop")
@@ -278,6 +278,7 @@ async def get_poe_chat_completion_non_streaming(
         choices=[choice_payload.to_dict()],
         system_fingerprint=system_fingerprint
     )
+    
     return response_completed_payload.to_dict()
 
 
@@ -333,7 +334,8 @@ async def get_poe_chat_completion_streaming(
             completed_error_payload = ChatCompletionBase(
                 **base_response_args,
                 choices=[choice_payload.to_dict()],
-                system_fingerprint=system_fingerprint
+                system_fingerprint=system_fingerprint,
+                object="chat.completion.chunk"
             )
             yield sse_formatter.format_chat_completion(completed_error_payload.to_dict())
             return
@@ -347,6 +349,7 @@ async def get_poe_chat_completion_streaming(
         **base_response_args,
         choices=[final_choice.to_dict()],
         system_fingerprint=system_fingerprint,
+        object="chat.completion.chunk"
     )
     yield sse_formatter.format_chat_completion(final_chunk.to_dict())
 
