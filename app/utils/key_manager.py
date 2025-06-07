@@ -2,6 +2,7 @@ from enum import Enum
 from typing import Optional
 
 import redis
+import os
 
 
 class KeyQuoteLevel(Enum):
@@ -25,8 +26,14 @@ class KeyManager:
             cls._instance = super().__new__(cls)
         return cls._instance
     
-    def __init__(self, redis_host='localhost', redis_port=6379, redis_db=0):
-        self.redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, decode_responses=True)
+    def __init__(self, redis_url=None):
+        if redis_url is None:
+            redis_url = os.getenv('REDIS_URL')
+        
+        if redis_url:
+            self.redis_client = redis.from_url(redis_url, decode_responses=True)
+        else:
+            self.redis_client = redis.from_url("redis://localhost:6379", decode_responses=True)
 
         self.queue_names = {
             KeyQuoteLevel.FULL: "key_queue:full",
