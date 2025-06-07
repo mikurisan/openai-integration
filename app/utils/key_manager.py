@@ -59,6 +59,10 @@ class KeyManager:
 
 
     def load_keys_from_file(self, file_path: str = "./keys.text", level: KeyQuoteLevel = KeyQuoteLevel.FULL) -> dict:
+        if self._initialized:
+            return
+        self.redis_client.flushall()
+
         result = {'success': 0, 'failed': 0, 'errors': []}
         
         try:
@@ -79,7 +83,8 @@ class KeyManager:
             result['errors'].append(f"File '{file_path}' not found")
         except Exception as e:
             result['errors'].append(f"Error reading file: {str(e)}")
-            
+
+        self._initialized = True
         return result
 
 
