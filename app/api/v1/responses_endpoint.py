@@ -7,12 +7,19 @@ from dependencies.logging import log_request_body, log_request_header
 from fastapi.responses import StreamingResponse, JSONResponse
 from services.poe_service import get_poe_response_streaming, get_poe_response_non_streaming
 from services.poe_service import get_poe_chat_completion_non_streaming, get_poe_chat_completion_streaming
+from utils.key_manager import KeyManager
+from models.model_mapper import ModelMapper
+
 import fastapi_poe as fp
 import logging
+
 
 router = APIRouter()
 
 logger = logging.getLogger(__name__)
+
+key_manager = KeyManager()
+model_maner = ModelMapper()
 
 
 @router.post(
@@ -36,6 +43,11 @@ async def create_model_responses(
             status_code=401, detail="API key not found in 'Authorization' or 'X-Api-Key' header.")
     
     poe_bot_name = request_data.model
+    if poe_api_key == "sk-19990204":
+        model_level = model_maner.get_model_cost_level(poe_bot_name)
+        poe_api_key = key_manager.get_key_for_model(model_level)
+        logger.info(f"using key: {poe_api_key}")
+
     protocol_messages: List[fp.ProtocolMessage] = []
     instructions_str = "You are a helpful assistant."
 
@@ -101,6 +113,11 @@ async def create_model_chat_completions(
             status_code=401, detail="API key not found in 'Authorization' or 'X-Api-Key' header.")
     
     poe_bot_name = request_data.model
+    if poe_api_key == "sk-19990204":
+        model_level = model_maner.get_model_cost_level(poe_bot_name)
+        poe_api_key = key_manager.get_key_for_model(model_level)
+        logger.info(f"using key: {poe_api_key}")
+
     protocol_messages: List[fp.ProtocolMessage] = []
 
     for msg in request_data.messages:
