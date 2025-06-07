@@ -18,6 +18,7 @@ app.include_router(responses_router)
 
 
 @app.get("/")
+@app.head("/")
 async def root():
     return {"message": "API is running", "endpoint": "/v1/responses"}
 
