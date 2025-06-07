@@ -3,3 +3,5 @@ fastapi_poe==0.0.63
 pydantic==2.11.5
 uvicorn==0.34.3
 redis==6.2.0
+httptools==0.6.4
+uvloop==0.21.0
