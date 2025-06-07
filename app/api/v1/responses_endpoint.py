@@ -22,12 +22,20 @@ key_manager = KeyManager()
 model_maner = ModelMapper()
 
 
+async def log_key_usage():
+    try:
+        yield
+    finally:
+        logger.info(key_manager.get_queue_counts())
+
+
 @router.post(
         "/v1/responses",
         response_model=None,
         dependencies=[
             Depends(log_request_body),
             Depends(log_request_header),
+            Depends(log_key_usage)
         ]
 )
 async def create_model_responses(
@@ -98,6 +106,7 @@ async def create_model_responses(
         dependencies=[
             Depends(log_request_body),
             Depends(log_request_header),
+            Depends(log_key_usage)
         ]
 )
 async def create_model_chat_completions(
