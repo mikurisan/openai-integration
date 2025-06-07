@@ -105,18 +105,33 @@ class ErrorBase(CustomBaseModel):
 class MessageBase(CustomBaseModel):
     content: str = ""
     refusal: Optional[str] = None
-    role: str = "assistant"
+    role: Optional[str] = None
     annotations: Optional[Any] = None
     audio: Optional[Any] = None
     function_call: Optional[Any] = None
     tool_calls: Optional[Any] = None
 
 
+class DeltaBase(CustomBaseModel):
+    content: Optional[str] = None
+    function_call: Optional[Any] = None
+    refusal: Optional[Any] = None
+    role: Optional[str] = None
+    tool_calls: Optional[Any] = None
+
+
 class ChoiceBase(CustomBaseModel):
-    finish_reason: str = "stop"
+    finish_reason: Optional[str] = None
     index: int = 0
     logprobs: Optional[Any] = None
+
+
+class ChoiceMessage(ChoiceBase):
     message: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ChoiceDelta(ChoiceBase):
+    delta: Dict[str, Any] = Field(default_factory=dict)
 
 
 class ChatCompletionBase(CustomBaseModel):
@@ -124,7 +139,7 @@ class ChatCompletionBase(CustomBaseModel):
     choices: List[Dict[str, Any]] = Field(default_factory=list) 
     created_at: int = Field(..., alias="created")
     model_name: str = Field(..., alias="model")
-    object: str = "chaht.completion"
-    service_tier: str = "default"
+    object: Optional[str] = "chat.completion"
+    service_tier: Optional[str] = "default"
     system_fingerprint: str = Field(...)
     usage: Dict[str, Any] = Field(default_factory=dict)

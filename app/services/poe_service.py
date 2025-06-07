@@ -4,6 +4,7 @@ from models.openai_types import ResponseStatus, ResponseTypes, ResponseBase
 from models.openai_types import ItemBase, OutputItem, PartBase, ContentPart
 from models.openai_types import OutputTextDelta, OutputText, ErrorBase
 from models.openai_types import MessageBase, ChoiceBase, ChatCompletionBase
+from models.openai_types import DeltaBase, ChoiceDelta, ChoiceMessage
 from fastapi_poe.client import BotError
 
 import fastapi_poe as fp
@@ -46,11 +47,11 @@ async def get_poe_response_streaming(
     sse_formatter = SSEFormatter()
     try:
         created_payload = ResponseBase(**base_response_args, status=ResponseStatus.IN_PROGRESS.value)
-        yield sse_formatter.format(ResponseTypes.CREATED.value, {'type': ResponseTypes.CREATED.value, 'response': created_payload.to_dict()})
+        yield sse_formatter.format_reponse(ResponseTypes.CREATED.value, {'type': ResponseTypes.CREATED.value, 'response': created_payload.to_dict()})
         await asyncio.sleep(0.01)
 
         in_progress_payload = ResponseBase(**base_response_args, status=ResponseStatus.IN_PROGRESS.value)
-        yield sse_formatter.format(ResponseTypes.CREATED.value, {'type': ResponseTypes.IN_PROGRESS.value, 'response': in_progress_payload.to_dict()})
+        yield sse_formatter.format_reponse(ResponseTypes.CREATED.value, {'type': ResponseTypes.IN_PROGRESS.value, 'response': in_progress_payload.to_dict()})
         await asyncio.sleep(0.01)
 
         item_id = f"msg-{uuid.uuid4().hex}"
@@ -60,7 +61,7 @@ async def get_poe_response_streaming(
             role="assistant"
             )
         output_item_added_payload = OutputItem(type=ResponseTypes.OUTPUT_ITEM_ADDED.value, item=item_base_payload.to_dict())
-        yield sse_formatter.format(ResponseTypes.OUTPUT_ITEM_ADDED.value, output_item_added_payload.to_dict())
+        yield sse_formatter.format_reponse(ResponseTypes.OUTPUT_ITEM_ADDED.value, output_item_added_payload.to_dict())
         await asyncio.sleep(0.01)
 
         part_base_payload = PartBase(type="output_text")
@@ -69,7 +70,7 @@ async def get_poe_response_streaming(
             item_id=item_id,
             part=part_base_payload.to_dict()
             )
-        yield sse_formatter.format(ResponseTypes.CONTENT_PART_ADDED.value, content_part_payload.to_dict())
+        yield sse_formatter.format_reponse(ResponseTypes.CONTENT_PART_ADDED.value, content_part_payload.to_dict())
         await asyncio.sleep(0.01)
         
         accumulated_text = ""
@@ -83,7 +84,7 @@ async def get_poe_response_streaming(
                     item_id=item_id,
                     delta=partial.text
                 )
-                yield sse_formatter.format(ResponseTypes.OUTPUT_TEXT_DELTA.value, delta_data.to_dict())
+                yield sse_formatter.format_reponse(ResponseTypes.OUTPUT_TEXT_DELTA.value, delta_data.to_dict())
                 await asyncio.sleep(0.01)
             elif isinstance(partial, fp.ErrorResponse):
                 error_text_from_poe = f"Poe ErrorResponse: {partial.text} (Code: {partial.error_code}, Type: {partial.error_type})"
@@ -98,14 +99,14 @@ async def get_poe_response_streaming(
                     error_obj=error_obj_payload.to_dict(),
                     usage_obj=DEFAULT_ERROR_USAGE
                     )
-                yield sse_formatter.format(ResponseTypes.COMPLETED.value, {'type': ResponseTypes.COMPLETED.value, 'response': completed_error_payload.to_dict()})
+                yield sse_formatter.format_reponse(ResponseTypes.COMPLETED.value, {'type': ResponseTypes.COMPLETED.value, 'response': completed_error_payload.to_dict()})
                 return
 
         output_text_done_payload = OutputText(
             type=ResponseTypes.OUTPUT_TEXT_DONE.value,
             item_id=item_id, text=accumulated_text
             )
-        yield sse_formatter.format(ResponseTypes.OUTPUT_TEXT_DONE.value, output_text_done_payload.to_dict())
+        yield sse_formatter.format_reponse(ResponseTypes.OUTPUT_TEXT_DONE.value, output_text_done_payload.to_dict())
         await asyncio.sleep(0.01)
 
         part_base_payload = PartBase(type="output_text", text=accumulated_text)
@@ -114,7 +115,7 @@ async def get_poe_response_streaming(
             item_id=item_id,
             part=part_base_payload.to_dict()
         )
-        yield sse_formatter.format(ResponseTypes.CONTENT_PART_DONE.value, content_part_done_payload.to_dict())
+        yield sse_formatter.format_reponse(ResponseTypes.CONTENT_PART_DONE.value, content_part_done_payload.to_dict())
         await asyncio.sleep(0.01)
 
         item_base_payload = ItemBase(
@@ -127,14 +128,14 @@ async def get_poe_response_streaming(
             type=ResponseTypes.OUTPUT_ITEM_DONE.value,
             item=item_base_payload.to_dict()
             )
-        yield sse_formatter.format(ResponseTypes.OUTPUT_ITEM_DONE.value, output_item_done_payload.to_dict())
+        yield sse_formatter.format_reponse(ResponseTypes.OUTPUT_ITEM_DONE.value, output_item_done_payload.to_dict())
         await asyncio.sleep(0.01)
 
         response_completed_payload = ResponseBase(
             **base_response_args, status=ResponseStatus.COMPLETED.value,
             output_list=[item_base_payload.to_dict()], usage_obj=DEFAULT_SUCCESS_USAGE
         )
-        yield sse_formatter.format(ResponseTypes.COMPLETED.value, {'type': ResponseTypes.COMPLETED.value, 'response': response_completed_payload.to_dict()})
+        yield sse_formatter.format_reponse(ResponseTypes.COMPLETED.value, {'type': ResponseTypes.COMPLETED.value, 'response': response_completed_payload.to_dict()})
     
     except BotError as e:
         logger.error(f"Handling BotError from Poe: {str(e)}")
@@ -161,7 +162,7 @@ async def get_poe_response_streaming(
                     error_obj=error_obj_payload.to_dict(),
                     usage_obj=DEFAULT_ERROR_USAGE
                     )
-        yield sse_formatter.format(ResponseTypes.COMPLETED.value, {'type': ResponseTypes.COMPLETED.value, 'response': completed_error_payload.to_dict()})
+        yield sse_formatter.format_reponse(ResponseTypes.COMPLETED.value, {'type': ResponseTypes.COMPLETED.value, 'response': completed_error_payload.to_dict()})
 
     except Exception as e:
         import traceback
@@ -178,7 +179,7 @@ async def get_poe_response_streaming(
                     error_obj=error_obj_payload.to_dict(),
                     usage_obj=DEFAULT_ERROR_USAGE
                     )
-        yield sse_formatter.format(ResponseTypes.COMPLETED.value, {'type': ResponseTypes.COMPLETED.value, 'response': completed_error_payload.to_dict()})
+        yield sse_formatter.format_reponse(ResponseTypes.COMPLETED.value, {'type': ResponseTypes.COMPLETED.value, 'response': completed_error_payload.to_dict()})
 
 
 async def get_poe_response_non_streaming(
@@ -257,8 +258,12 @@ async def get_poe_chat_completion_non_streaming(
         elif isinstance(partial, fp.ErrorResponse):
             error_text_from_poe = f"Poe ErrorResponse: {partial.text} (Code: {partial.error_code}, Type: {partial.error_type})"
             logger.error(error_text_from_poe)
-            error_obj_payload = MessageBase(refusal=partial.text or "Unknown error from Poe ErrorResponse")
-            choice_payload = ChoiceBase(message=error_obj_payload.to_dict(exclude={"content"}))
+            error_obj_payload = MessageBase(
+                refusal=partial.text or "Unknown error from Poe ErrorResponse",
+                role="assistant")
+            choice_payload = ChoiceMessage(
+                message=error_obj_payload.to_dict(exclude={"content"}),
+                finish_reason="stop")
             completed_error_payload = ChatCompletionBase(
                 **base_response_args,
                 choices=[choice_payload.to_dict()],
@@ -266,11 +271,83 @@ async def get_poe_chat_completion_non_streaming(
             )
             return completed_error_payload
 
-    message_payload = MessageBase(content=accumulated_text)
-    choice_payload = ChoiceBase(message=message_payload.to_dict())
+    message_payload = MessageBase(content=accumulated_text, role="assistant")
+    choice_payload = ChoiceMessage(message=message_payload.to_dict(), finish_reason="stop")
     response_completed_payload = ChatCompletionBase(
         **base_response_args,
         choices=[choice_payload.to_dict()],
         system_fingerprint=system_fingerprint
     )
     return response_completed_payload.to_dict()
+
+
+async def get_poe_chat_completion_streaming(
+        bot_name: str, poe_api_key: str,
+        protocol_messages: List[fp.ProtocolMessage],
+        request_model_name: str
+):
+    response_id = f"chatcmpl-{uuid.uuid4().hex}"
+    system_fingerprint = f"fp_{uuid.uuid4().hex[:10]}"
+    created_at = int(time.time())
+
+    base_response_args = {
+        "response_id": response_id,
+        "model_name": request_model_name,
+        "created_at": created_at 
+    }
+    sse_formatter = SSEFormatter()
+    
+    is_first_chunk = True
+    accumulated_text = ""
+    async for partial in fp.get_bot_response(
+        messages=protocol_messages, bot_name=bot_name, api_key=poe_api_key
+    ):
+        if isinstance(partial, fp.PartialResponse) and partial.text:
+            accumulated_text += partial.text
+
+            if is_first_chunk:
+                delta_payload = DeltaBase(
+                    role="assistant",
+                    content=partial.text).to_dict()
+                is_first_chunk = False
+            else:
+                delta_payload = DeltaBase(content=partial.text).to_dict()
+
+            choice_data = ChoiceDelta(
+                delta=delta_payload,
+                index=0,
+                )
+            chat_completion_data = ChatCompletionBase(
+                **base_response_args,
+                choices=[choice_data.to_dict()],
+                system_fingerprint=system_fingerprint
+            )
+            yield sse_formatter.format_chat_completion(chat_completion_data.to_dict())
+            await asyncio.sleep(0.01)
+
+        elif isinstance(partial, fp.ErrorResponse):
+            error_text_from_poe = f"Poe ErrorResponse: {partial.text} (Code: {partial.error_code}, Type: {partial.error_type})"
+            logger.error(error_text_from_poe)
+            error_obj_payload = MessageBase(refusal=partial.text or "Unknown error from Poe ErrorResponse")
+            choice_payload = ChoiceBase(message=error_obj_payload.to_dict(exclude={"content"}))
+            completed_error_payload = ChatCompletionBase(
+                **base_response_args,
+                choices=[choice_payload.to_dict()],
+                system_fingerprint=system_fingerprint
+            )
+            yield sse_formatter.format_chat_completion(completed_error_payload.to_dict())
+            return
+        
+    final_choice = ChoiceDelta(
+        delta={},
+        index=0,
+        finish_reason="stop"
+    )
+    final_chunk = ChatCompletionBase(
+        **base_response_args,
+        choices=[final_choice.to_dict()],
+        system_fingerprint=system_fingerprint,
+    )
+    yield sse_formatter.format_chat_completion(final_chunk.to_dict())
+
+    yield sse_formatter.format_chat_completion("[DONE]")

@@ -6,7 +6,7 @@ from models.request_models import ClientRequest
 from dependencies.logging import log_request_body, log_request_header
 from fastapi.responses import StreamingResponse, JSONResponse
 from services.poe_service import get_poe_response_streaming, get_poe_response_non_streaming
-from services.poe_service import get_poe_chat_completion_non_streaming
+from services.poe_service import get_poe_chat_completion_non_streaming, get_poe_chat_completion_streaming
 import fastapi_poe as fp
 import logging
 
@@ -110,7 +110,6 @@ async def create_model_chat_completions(
         if msg.role == "assistant":
             poe_role = "bot"
         elif msg.role not in ["system", "user", "bot"]:
-            logger.warning(f"Warning: Unknown role '{msg.role}', defaulting to 'user'.")
             poe_role = "user"
 
         protocol_messages.append(fp.ProtocolMessage(
@@ -118,11 +117,18 @@ async def create_model_chat_completions(
 
     if not protocol_messages:
         raise HTTPException(
-            status_code=400, detail="Messages list (derived from 'input') cannot be empty.")
+            status_code=400, detail="Messages list (derived from 'message') cannot be empty.")
 
     if request_data.stream:
-        return HTTPException(
-            status_code=401, detail="Chat completion stream is not supported.")
+        return StreamingResponse(
+            get_poe_chat_completion_streaming(
+                bot_name=poe_bot_name,
+                poe_api_key=poe_api_key,
+                protocol_messages=protocol_messages,
+                request_model_name=request_data.model,
+            ),
+            media_type="text/event-stream"
+        )
     else:
         response =  await get_poe_chat_completion_non_streaming(
             bot_name=poe_bot_name,
