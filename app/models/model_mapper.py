@@ -1,51 +1,56 @@
 from utils.key_manager import ModelCostLevel
-from typing import Optional
+from typing import Optional, Dict
+from pathlib import Path
 
 import json
 import logging
+import threading
 
 
 logger = logging.getLogger(__name__)
 
 
 class ModelMapper:
-    _instance: Optional['ModelMapper'] = None
-    _initialized = False
+    def __init__(self, default_level: ModelCostLevel = ModelCostLevel.MID):
+        self.default_level = default_level
+        self.model_mapping: Dict[str, ModelCostLevel] = {}
+        self._lock = threading.Lock()
+        self._config_file: Optional[Path] = None
 
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
 
-    def __init__(self, config_file: str = "./model_mapping.json"):
-        self.config_file = config_file
-        self.model_mapping = {}
-        self.default_level = ModelCostLevel.MID
+    def load_config(self, config_file: str | Path) -> bool:
+        self._config_file = Path(config_file)
 
-        self.load_config()
+        with self._lock:
+            self.model_mapping = {}
+            try:
+                with self._config_file.open('r', encoding="utf-8") as f:
+                    raw_mapping = json.load(f)
+                for model_name, level_str in raw_mapping.items():
+                    try:
+                        level = ModelCostLevel[level_str.upper()]
+                        self.model_mapping[model_name.lower()] = level
+                    except KeyError:
+                        logger.warning(
+                            f"Config Error in '{self._config_file}': "
+                            f"Unsupported cost level '{level_str}' for model '{model_name}'. Skipping."
+                        )
+                    
+                    logger.info(f"Successfully loaded {len(self.model_mapping)} model mappings from {self._config_file}")
+                    return True
 
-    def load_config(self) -> bool:
-        try:
-            with open(self.config_file, 'r', encoding="utf-8") as f:
-                model_mapping = json.load(f)
-
-            for model_name, level_str in model_mapping.items():
-                try:
-                    level = ModelCostLevel[level_str.upper()]
-                    self.model_mapping[model_name.lower()] = level
-                except (KeyError, AttributeError):
-                    logger.warning(f"Unsupported cost level '{level_str}' for model '{model_name}'")
-                    continue
-
-            logger.info(f"Loaded {len(self.model_mapping)} model mappings from {self.config_file}")
-            return True
-        except Exception as e:
-            logger.warning(f"Can't load config file: {e}. Using default mapping.")
+            except FileNotFoundError:
+                logger.error(f"Configuration file not found: '{self._config_file}'")
+            except json.JSONDecodeError as e:
+                logger.error(f"Error decoding JSON from '{self._config_file}': {e}")
+            except Exception as e:
+                logger.error(f"An unexpected error occurred while loading config '{self._config_file}': {e}", exc_info=True)
             return False
-        
+
     def get_model_cost_level(self, model_name: str) -> ModelCostLevel:
+        if not self.model_mapping:
+            return self.default_level
         model_name_lower = model_name.lower().strip()
-        if model_name_lower in self.model_mapping:
-                    return self.model_mapping[model_name_lower]
-        else:
-             return self.default_level
+
+        with self._lock:
+            return self.model_mapping.get(model_name_lower, self.default_level)
