@@ -112,7 +112,7 @@ class KeyManager:
             
             for key_lvel in available_key_levels:
                 queue_name = self.queue_names[key_lvel]
-                key = self.redis_client.rpop(queue_name)
+                key = self.redis_client.lindex(queue_name, 0)
 
                 if key:
                     if isinstance(key, bytes):
