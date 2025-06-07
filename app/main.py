@@ -17,12 +17,6 @@ app = FastAPI()
 app.include_router(responses_router)
 
 
-
-async def on_fetch(request: Request, env):
-    import asgi
-    return await asgi.fetch(app, request, env)
-
-
 @app.get("/")
 async def root():
     return {"message": "API is running", "endpoint": "/v1/responses"}
